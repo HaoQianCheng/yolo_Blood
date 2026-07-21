@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+
+# 虚拟环境
+.venv/
+
+# 训练输出
+runs/
+
+# 数据 (太大, 不上传)
+data/raw/
+data/datasets/
+data/manual_label/
+data/train_log.txt
+data/compare/
+data/annotated/
+data/sample_check/
+data/sample_check_viz/
+data/sample30/
+data/sample30_viz/
+data/verify_obb/
+
+# 原始素材
+训练素材/
+训练素材.zip
+
+# 权重文件 (太大, 从 ultralytics 自动下载)
+*.pt
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# 临时文件
+*.log
