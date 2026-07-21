@@ -38,15 +38,15 @@ Desktop.ini
 # 临时文件
 *.log
 
-# 模型二进制
-*.rknn
-*.onnx
+# 模型二进制 (已移至 runtime/rknn/)
+# *.rknn
+# *.onnx
 
-# 原生库
-*.so
+# 原生库 (已移至 runtime/rknn/)
+# *.so
 
-# Python wheel
-*.whl
+# Python wheel (已移至 runtime/rknn/)
+# *.whl
 
 # 训练输出
 runs/
