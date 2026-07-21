@@ -37,3 +37,16 @@ Desktop.ini
 
 # 临时文件
 *.log
+
+# 模型二进制
+*.rknn
+*.onnx
+
+# 原生库
+*.so
+
+# Python wheel
+*.whl
+
+# 训练输出
+runs/
