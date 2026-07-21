@@ -7,9 +7,6 @@ dist/
 # 虚拟环境
 .venv/
 
-# 训练输出
-runs/
-
 # 数据 (太大, 不上传)
 data/raw/
 data/datasets/
@@ -27,8 +24,8 @@ data/verify_obb/
 训练素材/
 训练素材.zip
 
-# 权重文件 (太大, 从 ultralytics 自动下载)
-*.pt
+# 预训练权重 (从 ultralytics 自动下载, 不上传)
+/yolo11n-obb.pt
 
 # IDE / OS
 .vscode/
