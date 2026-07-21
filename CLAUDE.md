@@ -21,7 +21,15 @@ yolo_Blood/
 │   ├── visualize_labels.py        # 把 OBB 标签画回原图
 │   ├── compare_labels.py          # 三合一对比图 (提取vs人工vs原图)
 │   ├── train.py                   # 训练脚本
-│   └── detect.py                  # 推理脚本
+│   ├── detect.py                  # 推理脚本 (PC ultralytics)
+│   ├── demo.py                    # 摄像头实时检测演示 (PC)
+│   └── rknn/                      # RK3576 板端部署
+│       ├── infer.py               # 板端推理 (rknn-toolkit-lite2)
+│       ├── infer_ctypes.py        # 板端推理 (ctypes + librknnrt.so C API)
+│       ├── infer_min.py           # 最小验证脚本 (ctypes 加载 RKNN)
+│       ├── server.py              # Web 检测服务 (Flask, :5000)
+│       └── templates/
+│           └── index.html         # Web 前端页面
 ├── data/
 │   ├── raw/                       # 719 对原图+标注图 (原始数据, 不动)
 │   ├── datasets/blood_label/     # 划分后的训练数据集
@@ -30,6 +38,11 @@ yolo_Blood/
 │   │   └── test/   images/  labels/   ( 67 张)
 │   ├── manual_label/             # 57 张丢弃图 (标签超出大框) 供人工改
 │   └── train_log.txt             # 最近一次训练日志
+├── runtime/                        # RKNN 板端运行时
+│   └── rknn/
+│       ├── best_rk3576.rknn        # RKNN 模型 (13.3MB)
+│       ├── librknnrt.so            # RKNN C 运行时 (7.4MB)
+│       └── rknn_toolkit_lite2-*.whl
 ├── runs/obb/                      # 训练输出
 ├── .venv/                         # Python 虚拟环境
 └── 训练素材/                       # 原始素材
@@ -129,6 +142,40 @@ python scripts/detect.py --source data/test/ --save-txt
 ```
 
 输出: `runs/detect/blood_label/det_*.jpg`（绿色旋转框 + 置信度文字）
+
+### 摄像头实时演示 (PC)
+
+```bash
+python scripts/demo.py [--weights runs/obb/.../best.pt] [--cam 0]
+```
+
+按 Q 退出，右侧信息面板显示检测统计。
+
+## 板端部署 (RK3576)
+
+### 推理
+
+```bash
+# rknn-toolkit-lite2 方式
+python scripts/rknn/infer.py --src test.jpg
+python scripts/rknn/infer.py --cam               # 摄像头实时
+
+# ctypes C API 方式 (绕过 toolkit 平台限制)
+python scripts/rknn/infer_ctypes.py --src test.jpg
+
+# 最小验证
+python scripts/rknn/infer_min.py
+```
+
+### Web 检测服务
+
+```bash
+python scripts/rknn/server.py    # http://<board_ip>:5000
+```
+
+- 摄像头实时画面 + OBB 旋转框检测
+- 支持在线调节置信度阈值
+- MJPEG 流输出
 
 ## OBB 标签格式要点
 
