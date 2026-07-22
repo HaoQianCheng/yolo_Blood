@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>血袋标签旋转框检测 - RK3576</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117; color: #c9d1d9;
+    font-family: -apple-system, 'Segoe UI', Roboto, monospace;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 16px;
+  }
+  h1 {
+    font-size: 18px; font-weight: 500; color: #58a6ff;
+    margin-bottom: 12px; letter-spacing: 0.5px;
+  }
+  .container {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    justify-content: center; max-width: 1200px; width: 100%;
+  }
+  .stream-box {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; overflow: hidden; flex: 1;
+    min-width: 640px; max-width: 900px;
+  }
+  .stream-box img {
+    width: 100%; display: block;
+    background: #000;
+  }
+  .sidebar {
+    width: 260px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .card {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 8px; padding: 16px;
+  }
+  .card h2 {
+    font-size: 13px; font-weight: 500; color: #8b949e;
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  }
+  .stat { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .stat .label { color: #8b949e; font-size: 13px; }
+  .stat .value { font-size: 18px; font-weight: 600; color: #58a6ff; font-variant-numeric: tabular-nums; }
+  .stat .value.warn { color: #f0883e; }
+  .stat .value.good { color: #3fb950; }
+
+  .slider-group { margin-top: 8px; }
+  .slider-group label { font-size: 13px; color: #8b949e; display: block; margin-bottom: 6px; }
+  .slider-group input[type="range"] {
+    width: 100%; accent-color: #58a6ff;
+    background: transparent; cursor: pointer;
+  }
+  .slider-val { text-align: right; font-size: 14px; color: #58a6ff; font-weight: 600; }
+
+  .legend { font-size: 12px; color: #484f58; margin-top: 8px; line-height: 1.6; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .dot.green { background: #3fb950; }
+  .dot.blue { background: #58a6ff; }
+
+  @media (max-width: 960px) {
+    .stream-box { min-width: 100%; }
+    .sidebar { width: 100%; flex-direction: row; }
+    .card { flex: 1; }
+  }
+</style>
+</head>
+<body>
+  <h1>🩸 血袋标签旋转框检测 &mdash; RK3576 NPU</h1>
+
+  <div class="container">
+    <div class="stream-box">
+      <img id="stream" src="/video" alt="实时视频流">
+    </div>
+
+    <div class="sidebar">
+      <div class="card">
+        <h2>运行状态</h2>
+        <div class="stat">
+          <span class="label">帧率</span>
+          <span class="value" id="fps">--</span>
+        </div>
+        <div class="stat">
+          <span class="label">推理耗时</span>
+          <span class="value" id="infer">-- ms</span>
+        </div>
+        <div class="stat">
+          <span class="label">检测数量</span>
+          <span class="value" id="dets">--</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>参数设置</h2>
+        <div class="slider-group">
+          <label>置信度阈值</label>
+          <input type="range" id="confSlider" min="0.05" max="0.95" step="0.05" value="0.25">
+          <div class="slider-val" id="confVal">0.25</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>系统信息</h2>
+        <div class="legend">
+          <span class="dot green"></span> 检测框<br>
+          <span class="dot blue"></span> 模型: YOLO11n-OBB<br>
+          芯片: RK3576 NPU<br>
+          驱动: v0.9.8<br>
+          运行时: 2.3.2
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const slider = document.getElementById('confSlider');
+const confVal = document.getElementById('confVal');
+
+slider.addEventListener('input', () => {
+  confVal.textContent = parseFloat(slider.value).toFixed(2);
+});
+
+slider.addEventListener('change', () => {
+  fetch('/api/conf', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({conf: parseFloat(slider.value)})
+  });
+});
+
+// 轮询状态
+function pollStatus() {
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(d => {
+      const fpsEl = document.getElementById('fps');
+      fpsEl.textContent = d.fps;
+      fpsEl.className = 'value ' + (d.fps >= 10 ? 'good' : d.fps >= 5 ? '' : 'warn');
+
+      document.getElementById('infer').textContent = d.infer_ms + ' ms';
+      document.getElementById('dets').textContent = d.detections;
+    })
+    .catch(() => {});
+}
+setInterval(pollStatus, 1000);
+pollStatus();
+
+// 流断开自动重连
+const img = document.getElementById('stream');
+img.addEventListener('error', () => {
+  setTimeout(() => { img.src = '/video?' + Date.now(); }, 2000);
+});
+</script>
+</body>
+</html>
