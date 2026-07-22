@@ -1,53 +1,49 @@
 # Python
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
-
-# 虚拟环境
+*$py.class
+*.so
+.Python
+venv/
 .venv/
+env/
+ENV/
 
-# 数据 (太大, 不上传)
-data/raw/
-data/datasets/
-data/manual_label/
-data/train_log.txt
-data/compare/
-data/annotated/
-data/sample_check/
-data/sample_check_viz/
-data/sample30/
-data/sample30_viz/
-data/verify_obb/
-
-# 原始素材
-训练素材/
-训练素材.zip
-训练素材2/
-训练素材2.zip
-
-# 预训练权重 (从 ultralytics 自动下载, 不上传)
-/yolo11n-obb.pt
-
-# IDE / OS
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-Thumbs.db
-Desktop.ini
+
+# 训练产物和大型文件
+runs/
+*.pt
+*.onnx
+*.rknn
+src/blood_classify/data/datasets/
+src/blood_label/data/raw/
+src/blood_label/data/datasets/
+
+# 数据集和素材
+训练素材/
+训练素材2/
+data/sample30/
+data/sample_check/
+data/compare/
+data/verify_obb/
+
+# 模型权重
+yolo11n-obb.pt
+yolo11s-obb.pt
+yolo11n-cls.pt
+
+# 输出和日志
+*.log
+*.csv
+!configs/*.yaml
 
 # 临时文件
-*.log
-
-# 模型二进制 (已移至 runtime/rknn/)
-# *.rknn
-# *.onnx
-
-# 原生库 (已移至 runtime/rknn/)
-# *.so
-
-# Python wheel (已移至 runtime/rknn/)
-# *.whl
-
-/yolo11s-obb.pt
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,11 @@
+# YOLO11 血袋类型分类数据集配置
+# 2 类: red_blood_cell (红细胞), plasma (血浆)
+path: src/blood_classify/data/datasets/blood_type  # 数据集根目录(相对项目根)
+train: train                     # 训练集(子目录即类别名)
+val: val                         # 验证集
+test: test                       # 测试集(可选)
+
+# 类别名(键=class id, 按文件夹字母序)
+names:
+  0: plasma
+  1: red_blood_cell
