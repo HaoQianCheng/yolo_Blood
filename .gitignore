@@ -50,6 +50,4 @@ Desktop.ini
 # Python wheel (已移至 runtime/rknn/)
 # *.whl
 
-# 训练输出
-runs/
 /yolo11s-obb.pt
