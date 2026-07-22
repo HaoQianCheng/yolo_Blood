@@ -23,6 +23,8 @@ data/verify_obb/
 # 原始素材
 训练素材/
 训练素材.zip
+训练素材2/
+训练素材2.zip
 
 # 预训练权重 (从 ultralytics 自动下载, 不上传)
 /yolo11n-obb.pt
@@ -50,3 +52,4 @@ Desktop.ini
 
 # 训练输出
 runs/
+/yolo11s-obb.pt

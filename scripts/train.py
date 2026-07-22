@@ -10,7 +10,8 @@ from ultralytics import YOLO
 
 
 def train(weights: str, data: str, epochs: int, imgsz: int,
-          batch: int, device: str, project: str, name: str) -> None:
+          batch: int, device: str, project: str, name: str,
+          resume: bool = False) -> None:
     model = YOLO(weights)
     results = model.train(
         data=data,
@@ -20,6 +21,10 @@ def train(weights: str, data: str, epochs: int, imgsz: int,
         device=device,
         project=project,
         name=name,
+        resume=resume,
+        degrees=180,       # 全角度旋转增强
+        flipud=0.5,        # 上下翻转 50%
+        fliplr=0.5,        # 左右翻转 50%
     )
     # best.pt 路径
     best = Path(results.save_dir) / "weights" / "best.pt"
@@ -39,9 +44,10 @@ def main():
     parser.add_argument("--device", default="0", help="设备(0=GPU, cpu=CPU)")
     parser.add_argument("--project", default="runs/obb", help="输出项目目录")
     parser.add_argument("--name", default="blood_label", help="本次运行名")
+    parser.add_argument("--resume", action="store_true", help="从上次中断处恢复训练")
     args = parser.parse_args()
     train(args.weights, args.data, args.epochs, args.imgsz,
-          args.batch, args.device, args.project, args.name)
+          args.batch, args.device, args.project, args.name, args.resume)
 
 
 if __name__ == "__main__":
