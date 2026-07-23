@@ -17,12 +17,16 @@ ENV/
 
 # 训练产物和大型文件
 runs/
+**/runs/
 *.pt
 *.onnx
 *.rknn
 src/blood_classify/data/datasets/
 src/blood_label/data/raw/
 src/blood_label/data/datasets/
+src/blood_label/crops/output/
+src/blood_label/crops/test_images/
+src/blood_label/data/
 
 # 数据集和素材
 训练素材/
