@@ -31,6 +31,7 @@ src/blood_label/data/
 # 数据集和素材
 训练素材/
 训练素材2/
+训练素材*.zip
 data/sample30/
 data/sample_check/
 data/compare/
