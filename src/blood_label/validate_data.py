@@ -1,6 +1,10 @@
 """数据校验脚本：检查图片对和 OBB 旋转框标注有效性"""
 import argparse
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
 import cv2
 from extract_labels import extract_label_obb, match_image_pairs
 

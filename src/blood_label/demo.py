@@ -160,7 +160,7 @@ def run_demo(weights: str, camera_id: int, conf_threshold: float) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="YOLO11-OBB 血袋标签实时检测演示")
-    parser.add_argument("--weights", default="runs/obb/runs/obb/blood_label/weights/best.pt",
+    parser.add_argument("--weights", default="../../runs/obb/runs/obb/blood_label/weights/best.pt",
                         help="模型权重路径")
     parser.add_argument("--camera", type=int, default=0, help="摄像头 ID (默认 0)")
     parser.add_argument("--conf", type=float, default=0.25, help="置信度阈值")

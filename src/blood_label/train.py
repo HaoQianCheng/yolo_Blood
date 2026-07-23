@@ -36,13 +36,13 @@ def main():
     parser = argparse.ArgumentParser(description="YOLO11-OBB 血袋标签训练")
     parser.add_argument("--weights", default="yolo11n-obb.pt",
                         help="预训练权重(默认 yolo11n-obb.pt, 自动下载)")
-    parser.add_argument("--data", default="configs/blood_label.yaml",
+    parser.add_argument("--data", default="../../configs/blood_label.yaml",
                         help="数据集配置 yaml")
     parser.add_argument("--epochs", type=int, default=100, help="训练轮数")
     parser.add_argument("--imgsz", type=int, default=640, help="训练图片尺寸")
     parser.add_argument("--batch", type=int, default=16, help="batch size")
     parser.add_argument("--device", default="0", help="设备(0=GPU, cpu=CPU)")
-    parser.add_argument("--project", default="runs/obb", help="输出项目目录")
+    parser.add_argument("--project", default="../../runs/obb", help="输出项目目录")
     parser.add_argument("--name", default="blood_label", help="本次运行名")
     parser.add_argument("--resume", action="store_true", help="从上次中断处恢复训练")
     args = parser.parse_args()

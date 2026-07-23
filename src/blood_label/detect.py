@@ -52,13 +52,13 @@ def detect(weights: str, source: str, conf: float,
 
 def main():
     parser = argparse.ArgumentParser(description="YOLO11-OBB 血袋标签推理")
-    parser.add_argument("--weights", default="runs/obb/blood_label/weights/best.pt",
+    parser.add_argument("--weights", default="../../runs/obb/blood_label/weights/best.pt",
                         help="训练好的权重(默认 best.pt)")
     parser.add_argument("--source", required=True,
                         help="输入图片或目录")
     parser.add_argument("--conf", type=float, default=0.25, help="置信度阈值")
     parser.add_argument("--save-txt", action="store_true", help="保存 OBB 坐标 txt")
-    parser.add_argument("--project", default="runs/detect", help="输出项目目录")
+    parser.add_argument("--project", default="../../runs/detect", help="输出项目目录")
     parser.add_argument("--name", default="blood_label", help="本次运行名")
     args = parser.parse_args()
     detect(args.weights, args.source, args.conf,

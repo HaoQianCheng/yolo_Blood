@@ -1,6 +1,6 @@
 # YOLO11-OBB 血袋标签检测数据集配置
 # 单类别: blood_label (血袋标签贴纸旋转框)
-path: data/datasets/blood_label  # 数据集根目录(相对项目根)
+path: src/blood_label/data/datasets/blood_label  # 数据集根目录(相对项目根)
 train: train/images              # 训练集图片(相对 path)
 val: val/images                  # 验证集图片
 test: test/images                # 测试集图片(可选, evaluate 时用)
