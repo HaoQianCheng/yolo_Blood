@@ -1,0 +1,8 @@
+/mnt/g/WSL/calib_images/20260720.154901.561.000345.origin.jpg
+/mnt/g/WSL/calib_images/20260720.154903.365.000347.origin.jpg
+/mnt/g/WSL/calib_images/20260720.155909.073.000264.origin.jpg
+/mnt/g/WSL/calib_images/20260720.155911.786.000267.origin.jpg
+/mnt/g/WSL/calib_images/20260720.160801.060.000271.origin.jpg
+/mnt/g/WSL/calib_images/20260720.160805.461.000276.origin.jpg
+/mnt/g/WSL/calib_images/20260720.162156.880.000186.origin.jpg
+/mnt/g/WSL/calib_images/20260720.162201.346.000191.origin.jpg
