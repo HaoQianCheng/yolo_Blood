@@ -1,188 +1,226 @@
-# yolo_Blood
+# yolo_Blood — 血袋标签检测与类型分类
 
-中文 | [English](README_EN.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![YOLO11](https://img.shields.io/badge/Model-YOLO11-00b3ff.svg)](https://docs.ultralytics.com/models/yolo11/)
+[![RK3576](https://img.shields.io/badge/Target-RK3576_NPU-e92c2a.svg)](https://www.rock-chips.com/)
+[![Board FPS](https://img.shields.io/badge/RK3576_INT8-30~39_FPS-brightgreen.svg)](docs/rkopt-int8-guide.md)
 
-基于 Ultralytics YOLO11 的血袋图像实验项目，包含两个独立任务：
+[English](README_EN.md) | 简体中文
 
-- **标签检测**：YOLO11-OBB 检测血袋上的标签贴纸，输出四角点旋转框；只有 `blood_label` 一个检测类别。
-- **类型分类**：YOLO11-cls 区分 `plasma`（血浆）和 `red_blood_cell`（红细胞），输出整张图的类别与置信度。
+基于 **YOLO11-OBB** 的血袋标签旋转框检测与血袋类型分类项目，完整覆盖 **数据自动标注 → 训练 → RKNN INT8 量化 → RK3576 板端部署** 全流程，板端实时推理达到 **30~39 FPS**。
 
-另有 PC 摄像头/Web 演示及 RK3576 RKNN 推理、量化转换和排查脚本。标签定位不等于 OCR，血袋类型分类也不是 ABO/Rh 血型检测。本项目未在本 README 中提供临床验证或医疗用途适用性证明，不能据此进行诊断、配血或输血决策。
+![检测效果](docs/images/detection-demo.jpg)
 
-## 目录导航
+> ⚠️ **免责声明**：本项目是计算机视觉实验项目。标签定位不等于 OCR，血袋类型分类也不是 ABO/Rh 血型检测；本项目未提供临床验证或医疗用途适用性证明，**不能据此进行诊断、配血或输血等医疗决策**。
 
-```text
-yolo_Blood/
-├── src/blood_label/         # OBB 数据处理、训练、PC 推理与演示
-│   ├── crops/              # 标签裁剪工具
-│   ├── raw/                # 仓库中的部分原始样本/标签，不等于完整训练集
-│   └── rknn/               # 标准 OBB 板端推理、Web 服务及模板
-├── src/blood_classify/      # 分类数据准备、训练、PC 与 RKNN 推理
-├── configs/                # 数据集配置
-├── scripts/rknn/           # RKOPT 转换、ONNX 检查及 opset 工具
-├── runtime/rknn/           # 已提交的 OBB RKNN 模型、运行库、Lite2 wheel
-├── runs/                   # 已提交的部分训练输出、权重和 ONNX 文件
-├── templates/              # 根目录 Web 服务模板
-├── server_remote.py        # RKOPT Web 服务，端口 5000
-├── server_hd.py            # RKOPT 高清摄像头/拍照裁剪服务，端口 5001
-└── docs/                   # 方案与排查记录
-```
+## ✨ 特性
 
-默认工作目录很重要：OBB 命令在 `src/blood_label/` 下运行，分类命令在 `src/blood_classify/` 下运行。下面每组示例会标明目录；`/absolute/path/...` 是需要替换的本机路径。
+- 🔄 **旋转框 (OBB) 检测** — 血袋倾斜摆放时水平框会包裹大量背景、干扰后续 OCR，本项目使用 Oriented Bounding Box 精确贴合标签贴纸（单类别 `blood_label`）
+- 🏷️ **自动标注流水线** — 原始数据自带人工标注渲染图，通过 `cv2.absdiff` 差分 + 轮廓分析自动提取 OBB 标签坐标，无需手工逐张标注
+- 🩸 **血袋类型分类** — 基于颜色与形状区分 `plasma`（血浆）/ `red_blood_cell`（红细胞）（YOLO11n-cls），无需 OCR
+- ⚡ **RKOPT INT8 量化** — 采用 airockchip 官方 RKOPT 导出方案（移除 Sigmoid/DFL 后处理），解决 RKNN int8 量化 conf 全 0 的问题，板端速度提升 **2.4×**（13 FPS → 30~39 FPS）
+- 🖥️ **板端 Web 服务** — Flask 实时视频流 + 检测 API + 高清拍照，supervisor 常驻部署
 
-## 环境准备（PC）
+## 📐 项目组成
 
-核心依赖由代码导入确定：Python、PyTorch、Ultralytics、OpenCV、NumPy；Web 演示另需 Flask。仓库没有统一的 `requirements.txt`、`pyproject.toml` 或依赖锁文件，以下是起步安装示例，不是经过验证的锁定环境。
+| 子项目 | 目录 | 任务 | 模型 |
+|--------|------|------|------|
+| 血袋标签检测 | `src/blood_label/` | 检测血袋标签贴纸，输出四角点旋转框 | YOLO11n-OBB |
+| 血袋类型分类 | `src/blood_classify/` | 区分血浆 / 红细胞 | YOLO11n-cls |
+
+### 检测指标（yolo11n-obb，epoch 98）
+
+| 指标 | 值 |
+|------|-----|
+| mAP@50 | **0.9691** |
+| mAP@50-95 | 0.2239 |
+| Precision | 1.000 |
+| Recall | 0.995 |
+
+> mAP@50-95 偏低是 OBB 任务对角度精度敏感所致，小数据集（662 张）下属正常水平；实际检测结果见上图。
+
+## 🔧 环境要求
+
+**PC 端（训练 / 转换）**
+
+- Python ≥ 3.10（开发环境为 3.12）
+- PyTorch ≥ 2.0（开发环境 2.13.0+cu126，GTX 1660 SUPER 6GB 即可训练；无 CUDA 时 `--device cpu`）
+- [ultralytics](https://docs.ultralytics.com/) ≥ 8.3、OpenCV、NumPy；Web 演示另需 Flask
+- RKNN 模型转换在 WSL2 / Linux 中进行，需 [rknn-toolkit2](https://github.com/airockchip/rknn-toolkit2) 2.3.2
+
+**板端（RK3576）**
+
+- rknn-toolkit-lite2 2.3.2（`runtime/rknn/*.whl`）
+- librknnrt 2.3.2、NPU 驱动 ≥ v0.9.8
+- Python 3.10 (aarch64)、OpenCV、Flask
+
+## 🚀 快速开始
 
 ```bash
-# 仓库根目录
+git clone https://github.com/HaoQianCheng/yolo_Blood.git
+cd yolo_Blood
+
+# PC 端安装依赖
 python -m venv .venv
-# Linux/macOS
-source .venv/bin/activate
-# Windows PowerShell 则使用：.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install ultralytics opencv-python numpy flask
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
 ```
 
-先根据本机 CPU/CUDA 环境选择匹配的 PyTorch 安装方式；安装完成后检查实际版本和 GPU 是否可用。训练默认 `--device 0`，没有可用 CUDA GPU 时传 `--device cpu`。摄像头窗口需要可用摄像头和图形桌面，不能以无 GUI 的 OpenCV 包代替窗口演示依赖。
+> 脚本工作目录很重要：OBB 命令在 `src/blood_label/` 下运行，分类命令在 `src/blood_classify/` 下运行（路径默认相对脚本目录）。
 
-[CLAUDE.md](CLAUDE.md) 记录了原开发环境，但不是可复现依赖清单。预训练权重不存在时，Ultralytics 可能需要联网下载。只加载来源可信的模型权重。
+### 1. 数据准备（自动标注）
 
-## 1. 血袋标签检测（OBB）
-
-### 准备数据
-
-准备有权使用且已去标识化的 `*.origin.jpg` 原图与 `*.render.jpg` 人工画框图，放到 `src/blood_label/data/raw/`。提取器依赖该项目的画框样式和几何规则，并非通用标注格式转换器。
+准备**有权使用且已去标识化**的成对图片——原图 `*.origin.jpg` + 人工标注渲染图 `*.render.jpg`，放入 `src/blood_label/data/raw/`：
 
 ```bash
-# 从仓库根目录进入
 cd src/blood_label
-python extract_labels.py --raw data/raw --output data/raw
+
+# 从 render 图差分提取 OBB 标签（绝对像素坐标 → *.txt）
+python extract_labels.py --raw data/raw
+
+# 划分数据集并归一化坐标（7:2:1 → train/val/test）
+python split_dataset.py --raw data/raw --output data/datasets/blood_label
+
+# 校验与可视化抽查
 python validate_data.py --raw data/raw
-python split_dataset.py --raw data/raw --output data/datasets/blood_label --manual data/manual_label --seed 42
+python compare_labels.py --raw data/test_pair --output data/compare
 ```
 
-- 提取标签为 `class x1 y1 x2 y2 x3 y3 x4 y4`，坐标是**绝对像素**。
-- 划分脚本按约 7:2:1 分为 train/val/test，并将坐标归一化到 0–1，生成各子集的 `images/` 与 `labels/`。
-- 空标签样本被另存到人工检查输出目录，不作为训练子集中的负样本使用。
-- 图片配对按文件名排序后 `zip`，不是按唯一标识匹配；新增数据必须核对配对和数量。连续拍摄的近重复图也应检查是否跨训练/验证集泄漏。
-- 输出目录会被复用，重新划分不会清理旧文件；不同数据版本请使用新的输出目录。
+提取原理：`cv2.absdiff(origin, render)` 差异即标注线 → 闭运算连接断线 → 找轮廓识别「外层大框」与「内部竖长标签框」（h/w 1.2~2.5，面积 ≥ 30000px）→ `cv2.minAreaRect` 取旋转矩形 4 角点；角点越界则丢弃（空 txt），丢弃图集中在 `data/manual_label/` 供人工复核。
 
-编辑 [configs/blood_label.yaml](configs/blood_label.yaml)，将 `path` 指向生成数据集的**绝对路径**，避免 Ultralytics 数据目录设置与相对路径解析差异。保留 `train: train/images`、`val: val/images`、`test: test/images` 和 `0: blood_label`。
+> ⚠️ 注意事项：
+> - 提取器依赖本项目的画框样式与几何规则，**不是通用标注格式转换器**
+> - 图片按文件名排序后 `zip` 配对（非唯一标识匹配），新增数据须核对配对与数量；连续拍摄的近重复图应检查是否跨训练/验证集泄漏
+> - 划分输出目录会被复用，不同数据版本请使用新的输出目录
+> - 训练前编辑 [configs/blood_label.yaml](configs/blood_label.yaml)，将 `path` 指向数据集**绝对路径**
 
-仓库中没有完整的默认 `data/datasets/` 训练目录；历史文档中的样本数量不是本次运行的保证。
-
-### 训练
+### 2. 训练
 
 ```bash
-# 工作目录：src/blood_label
-python train.py --data ../../configs/blood_label.yaml --weights yolo11n-obb.pt --epochs 100 --imgsz 640 --batch 16 --device 0
+# OBB 标签检测
+cd src/blood_label
+python train.py --data ../../configs/blood_label.yaml --epochs 100 --batch 16 --imgsz 640 --device 0
+
+# 血袋类型分类（需先在 data/datasets/blood_type/ 下按类别目录放置图片）
+cd ../blood_classify
+python train.py --epochs 100 --batch 32 --imgsz 224 --device 0
 ```
 
-脚本默认 `--project ../../runs/obb --name blood_label`，并启用旋转/翻转增强。以训练完成时打印的 `best.pt` 路径为准；重复运行可能产生递增目录。CPU 运行可将 `--device 0` 换成 `--device cpu`。
+预训练权重（`yolo11n-obb.pt` 等）不存在时由 Ultralytics 联网自动下载；请只加载来源可信的权重。训练产物输出到项目根 `runs/` 目录。
 
-### 图片、目录、摄像头与 Web 推理
+### 3. 导出 RKOPT ONNX + INT8 量化
 
-以下使用仓库中已提交的 n-2 OBB 权重路径；用自己的训练结果时替换 `--weights`：
+详见 [docs/rkopt-int8-guide.md](docs/rkopt-int8-guide.md)。核心流程：
 
 ```bash
-# 工作目录：src/blood_label
-python detect.py --weights ../../runs/obb/runs/obb/blood_label_n-2/weights/best.pt --source /absolute/path/image.jpg --conf 0.25
-python detect.py --weights ../../runs/obb/runs/obb/blood_label_n-2/weights/best.pt --source /absolute/path/images --save-txt
-python demo.py --weights ../../runs/obb/runs/obb/blood_label_n-2/weights/best.pt --camera 0
-python server_pc.py --weights ../../runs/obb/runs/obb/blood_label_n-2/weights/best.pt --cam 0 --port 5000
+# ① 用 airockchip/ultralytics_yolo11 导出 RKOPT ONNX（自动移除 Sigmoid/DFL）
+git clone --depth 1 https://github.com/airockchip/ultralytics_yolo11.git
+#    编辑 ultralytics/cfg/default.yaml 的 model: 指向 best.pt 后：
+cd ultralytics_yolo11 && export PYTHONPATH=./
+python ./ultralytics/engine/exporter.py
+
+# ② ONNX → RKNN INT8（WSL / Linux，rknn-toolkit2）
+cd ../../scripts/quant
+python convert_int8.py <best.onnx> <calib_images_dir> <output_dir> --target rk3576
+
+# ③ 量化精度对比（PC 模拟）
+python calc_error.py
 ```
 
-`detect.py` 默认输出到 `../../runs/detect/blood_label`，生成 `det_*` 标注图；`--save-txt` 还会请求 Ultralytics 保存坐标。不同输出写入方式可能使用不同的递增目录，请检查日志。摄像头窗口按 Q 退出；PC Web 页面为 `http://localhost:5000`。
+### 4. 板端部署（RK3576）
 
-注意：`demo.py` 的摄像头参数是 `--camera`，`server_pc.py` 则是 `--cam`。训练、图片推理和演示脚本的默认权重路径并不完全一致，因此建议始终显式传入权重。
-
-## 2. 血袋类型分类
-
-准备如下目录；类别文件夹名决定类别，当前推理脚本固定映射 `0 = plasma`、`1 = red_blood_cell`：
-
-```text
-src/blood_classify/data/datasets/blood_type/
-├── train/{plasma,red_blood_cell}/
-├── val/{plasma,red_blood_cell}/
-└── test/{plasma,red_blood_cell}/
-```
-
-`prepare_dataset.py` 依赖源码中写死的原始素材目录，使用前需检查这些目录；它不是任意输入路径的 CLI。也可以自行按上述结构整理数据。分类训练的 `--data` 接收**目录，不是 YAML 文件**。
+详见 [docs/deployment-rk3576.md](docs/deployment-rk3576.md)。速览：
 
 ```bash
-# 从仓库根目录进入
-cd src/blood_classify
-python train.py --data data/datasets/blood_type --weights yolo11n-cls.pt --epochs 100 --imgsz 224 --batch 32 --device 0
-python detect.py --weights /absolute/path/classification/best.pt --source /absolute/path/image.jpg
+# 上传运行时、模型与服务到板子
+scp runtime/rknn/{best_rk3576.rknn,librknnrt.so} root@<board_ip>:/root/blood_label/
+scp apps/server_hd.py root@<board_ip>:/root/blood_label/server.py
+scp configs/blood_label.conf root@<board_ip>:/etc/supervisor/conf.d/
+
+# 板端安装 lite2 运行库
+pip3 install runtime/rknn/rknn_toolkit_lite2-2.3.2-*.whl
+
+# 板端单图 / 摄像头推理验证
+cd src/blood_label/rknn
+python3 infer.py --src test.jpg
+python3 infer.py --cam
+
+# 启动 Web 检测服务（Flask，http://<board_ip>:5000）
+supervisorctl update && supervisorctl start blood_label
 ```
 
-训练默认输出到 `../../runs/classify/blood_type`；Windows 多进程数据加载有问题时可尝试 `--workers 0`。图片推理打印类别和置信度。仓库没有提交分类 `best.pt` 或分类 RKNN 权重，须先训练/准备对应模型。改变类别时还需核对固定类别映射和导出模型的输出顺序。
+PC 端 GPU 推理 Web 服务：`cd src/blood_label && python server_pc.py`。
 
-## 3. RK3576 部署
+## 📁 目录结构
 
-### 运行环境与模型约定
-
-- 转换端使用 RKNN-Toolkit2；板端使用 RKNN-Toolkit-Lite2、OpenCV、NumPy，Web 服务另需 Flask。
-- [runtime/rknn](runtime/rknn/) 提供 OBB 模型与运行时文件。已提交 Lite2 wheel 标记为 `cp310`、`aarch64`，只能在相应 Python ABI/架构环境使用；不要安装到 PC 的 Python 3.12 环境。
-- 确认模型目标芯片、Toolkit、Lite2、`librknnrt.so` 和板端驱动的兼容性。不要仅比较不同组件的版本数字大小或直接覆盖系统运行库。
-- 下列脚本没有 `--model` 参数，模型路径写死在源码中。先将**匹配任务和输出格式**的模型放到指定路径，或在自己的部署副本中调整常量。
-
-| 入口 | 期望的模型路径 | 任务/格式 |
-| --- | --- | --- |
-| `src/blood_label/rknn/infer.py`、`server.py` | `/root/blood_label/best_rk3576.rknn` | 标准 OBB |
-| `src/blood_classify/rknn/infer.py` | `/root/blood_classify/best_rk3576.rknn` | 两类分类 |
-| `server_remote.py`、`server_hd.py` | `/root/blood_label/best_rkopt_rk3576.rknn` | RKOPT 四分支 OBB |
-
-### 标准模型推理
-
-在已配置好运行环境、模型和摄像头的 RK3576 上，以下从仓库根目录运行：
-
-```bash
-python3 src/blood_label/rknn/infer.py --src /absolute/path/image.jpg --conf 0.25
-python3 src/blood_label/rknn/infer.py --cam 0
-python3 src/blood_label/rknn/server.py
-
-# 需要另行准备分类 RKNN 模型
-python3 src/blood_classify/rknn/infer.py --src /absolute/path/image.jpg
-python3 src/blood_classify/rknn/infer.py --cam 0
+```
+yolo_Blood/
+├── apps/                        # 板端应用（RK3576）
+│   ├── server_hd.py             #   Web 检测服务（高清拍照版，主入口，:5000/:5001）
+│   ├── server_remote.py         #   Web 检测服务（远程版）
+│   ├── server_optimized.py      #   Web 检测服务（早期优化版）
+│   ├── templates/index.html     #   Web 前端页面
+│   └── index_remote.html        #   远程预览页
+├── src/
+│   ├── blood_label/             # OBB 标签检测子项目
+│   │   ├── train.py             #   训练
+│   │   ├── train_qat.py         #   QAT 量化感知训练
+│   │   ├── detect.py / demo.py  #   PC 推理 / 摄像头演示
+│   │   ├── server_pc.py         #   PC 端 Web 服务 (CUDA)
+│   │   ├── extract_labels.py    #   自动标注（diff 提取 OBB）
+│   │   ├── split_dataset.py     #   数据集划分 + 坐标归一化
+│   │   ├── validate_data.py     #   数据校验
+│   │   ├── visualize_labels.py / compare_labels.py   # 可视化
+│   │   ├── crops/crop_labels.py #   标签区域裁剪（供 OCR）
+│   │   └── rknn/                #   板端推理（lite2 / ctypes）+ Web 服务
+│   └── blood_classify/          # 血袋类型分类子项目
+│       ├── train.py / detect.py #   训练 / PC 推理
+│       ├── server_pc.py         #   PC 端 Web 服务
+│       ├── prepare_dataset.py   #   数据集准备
+│       └── rknn/infer.py        #   板端推理
+├── scripts/
+│   ├── rknn/                    # RKNN 转换工具
+│   │   ├── convert_rkopt.py     #   RKOPT ONNX → RKNN int8 PTQ
+│   │   ├── check_rkopt_onnx.py  #   ONNX 结构检查
+│   │   └── fix_opset.py         #   opset 降级 (20 → 19)
+│   ├── quant/                   # INT8 量化工具
+│   │   ├── convert_int8.py      #   ONNX → RKNN INT8 转换
+│   │   ├── calc_error.py        #   量化误差评估
+│   │   ├── sim_test.py          #   PC 端模拟测试
+│   │   └── prep_calib.sh        #   校准图片集准备
+│   └── upload_model.py          #   模型上传到板子（SFTP）
+├── configs/                     # 配置
+│   ├── blood_label.yaml         #   OBB 数据集配置
+│   ├── blood_type.yaml          #   分类数据集配置
+│   └── blood_label.conf         #   supervisor 部署配置
+├── runtime/rknn/                # 板端运行时（librknnrt.so、lite2 whl、rknn 模型）
+├── docs/                        # 文档（见下）
+├── models/                      # 本地模型产物（不入库）
+└── assets/                      # 示例图片
 ```
 
-OBB Web 服务使用端口 5000。板端单图脚本会保存标注结果；摄像头窗口同样需要图形环境。分类预处理采用 224×224 RGB 输入，部署时必须与模型转换的归一化和输出约定一致。`infer_ctypes.py`、`infer_min.py` 是较底层的 C API/最小排查入口，不应视为所有板卡的通用替代方案。
+## 📚 文档
 
-### RKOPT INT8 转换与 Web 服务
+| 文档 | 说明 |
+|------|------|
+| [RKOPT INT8 量化完整方案](docs/rkopt-int8-guide.md) | 4 种量化方案对比、RKOPT 导出细节、板端 30+ FPS 实测 |
+| [RK3576 部署指南](docs/deployment-rk3576.md) | 板端环境、模型上传、supervisor 常驻、常见部署问题 |
+| [训练指南](docs/training-guide.md) | 数据流水线细节、训练参数、指标解读 |
+| [RKNN 初始化排查记录](docs/troubleshooting-rknn-init.md) | RKNN init 失败 -7 等问题排查过程 |
 
-先阅读 [RKOPT 量化方案](docs/rkopt-int8-guide.md)。该路线使用 Rockchip 适配导出器，将部分检测头运算移至 CPU 后处理；不能把任意标准 ONNX 或标准 OBB RKNN 模型当作 RKOPT 模型。
+## ❓ FAQ
 
-当前 [convert_rkopt.py](scripts/rknn/convert_rkopt.py) 的主程序写死了本机 WSL 路径，**没有解析文档示例中的位置参数**。可在已装 Toolkit2 的转换环境中，从仓库根目录直接调用函数，并替换以下路径：
+- **为什么用 OBB 而不是普通水平框？** 实际场景血袋总是倾斜摆放，水平框会带入大量背景，影响后续 OCR；旋转框能精确贴合标签贴纸。
+- **RKNN INT8 量化后 conf 全是 0 怎么办？** 这是 Sigmoid 输出被 int8 量化压死的已知问题，请使用 RKOPT 导出方案（移除 Sigmoid/DFL，CPU 后处理），见量化文档。
+- **训练时 AMP 报错？** GTX 1660 SUPER 无 Tensor Core，不支持 AMP，使用 float32 训练即可。
+- **OBB 标签格式？** `class x1 y1 x2 y2 x3 y3 x4 y4`（4 角点）；ultralytics 训练要求归一化坐标，`split_dataset.py` 会自动完成归一化；推理结果 `r.obb.xyxyxyxy` 为绝对像素坐标。
 
-```bash
-python - <<'PY'
-from pathlib import Path
-from scripts.rknn.convert_rkopt import convert
-out = Path('/absolute/path/rknn_output')
-out.mkdir(parents=True, exist_ok=True)
-convert('/absolute/path/rkopt.onnx', '/absolute/path/calibration', str(out), target='rk3576')
-PY
-```
+## 🤝 贡献
 
-校准目录需要至少 5 张 `.jpg`/`.png` 图片，以及列出有效图片路径的 `calib.txt`。数量要求来自脚本检查，不代表量化质量保证。函数固定进行 INT8 量化，输出 `best_rkopt_rk3576.rknn`；当前仓库未提交该产物。
+欢迎提交 Issue 与 Pull Request，参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-板端放好 RKOPT 模型后，可从仓库根目录运行其中一个服务，保留同目录的 `templates/`：
+## 📄 许可证
 
-```bash
-python3 server_remote.py  # 端口 5000
-# 或
-python3 server_hd.py      # 端口 5001，高清采集与拍照裁剪
-```
-
-它们的后处理固定按 640 输入、单类别、三个检测头加一个角度分支解析（`[1,65,80,80]`、`[1,65,40,40]`、`[1,65,20,20]`、`[1,1,8400]`）。更换导出方式、输入尺寸或类别数时必须重新核对，不能直接复用。
-
-## 限制与排查
-
-- **Web 安全**：这些 Flask 演示默认绑定 `0.0.0.0`，代码没有提供完整认证/TLS 部署方案。只在可信隔离网络使用，不要直接暴露到公网。摄像头、截图和标签裁剪可能包含个人信息，应先去标识化并控制保存、访问与分享范围。
-- **版本与历史记录**：[初始化 -7 排查记录](docs/rk3576-rknn-init-7-排查.md) 与较新的 RKOPT 记录对同一驱动版本有不同结论。它们是排查历史，不是兼容性矩阵；以实际板卡日志和厂商配套版本为准。
-- **实验脚本**：`convert_int8.py`、`train_qat.py` 等保留实验路线，名称不构成有效 QAT、量化正确性或加速效果的保证。
-- **结果解释**：本 README 依据代码和配置整理，未重新训练、执行推理或在 RK3576 上验证。不将历史文档中的精度/FPS作为复现保证；部署前需自行验证准确性、鲁棒性、速度和数据划分。
-
-更多入口：[项目开发说明](CLAUDE.md) · [RKNN 文件说明](runtime/rknn/README.md) · [RKOPT 指南](docs/rkopt-int8-guide.md)
+[MIT License](LICENSE) © HaoQianCheng

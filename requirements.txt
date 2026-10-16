@@ -1,0 +1,15 @@
+# PC 端依赖（训练 / 推理 / 可视化）
+# RKNN 模型转换请在 Linux/WSL 中单独安装 rknn-toolkit2==2.3.2（https://github.com/airockchip/rknn-toolkit2）
+
+ultralytics>=8.3.0
+torch>=2.0.0
+torchvision
+opencv-python>=4.8.0
+numpy
+flask>=3.0.0
+pillow
+paramiko          # scripts/upload_model.py 模型上传
+
+# --- 可选 ---
+# onnx              # ONNX 结构检查 / opset 转换 (scripts/rknn/)
+# rknn-toolkit2==2.3.2  # Linux/WSL 模型转换

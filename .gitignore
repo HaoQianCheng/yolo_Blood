@@ -8,39 +8,45 @@ venv/
 .venv/
 env/
 ENV/
+build/
+dist/
+*.egg-info/
 
-# IDE
+# IDE / AI 工具
 .vscode/
 .idea/
 *.swp
 *.swo
+.claude/
 
-# 训练产物和大型文件
-runs/
-**/runs/
+# 模型产物（训练权重 / 导出模型，不入库）
+models/
 *.pt
 *.onnx
 *.rknn
+!runtime/rknn/*.rknn
+
+# 训练输出与数据集
+runs/
+**/runs/
 src/blood_classify/data/datasets/
-src/blood_label/data/raw/
-src/blood_label/data/datasets/
+src/blood_label/data/
+src/blood_label/raw/
 src/blood_label/crops/output/
 src/blood_label/crops/test_images/
-src/blood_label/data/
 
 # 数据集和素材
 训练素材/
 训练素材2/
 训练素材*.zip
+calib_images/
 data/sample30/
 data/sample_check/
 data/compare/
 data/verify_obb/
 
-# 模型权重
-yolo11n-obb.pt
-yolo11s-obb.pt
-yolo11n-cls.pt
+# 内部计划文档（本地保留）
+docs/superpowers/
 
 # 输出和日志
 *.log

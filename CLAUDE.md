@@ -24,95 +24,23 @@
 
 ## 目录结构
 
+完整目录结构见 README.md（开源主文档）。速览：
+
 ```
 yolo_Blood/
+├── apps/                  ← 板端应用 (server_hd.py 主服务 + templates)
 ├── src/
-│   ├── blood_label/               ← OBB 标签检测 (所有脚本在此目录下运行)
-│   │   ├── train.py               # 训练脚本
-│   │   ├── detect.py              # 推理脚本 (PC ultralytics)
-│   │   ├── demo.py                # 摄像头实时检测演示 (PC)
-│   │   ├── server_pc.py           # Web 检测服务 (PC/CUDA, Flask :5000)
-│   │   ├── extract_labels.py      # 核心: 从 render 图提取 OBB 标签
-│   │   ├── split_dataset.py       # 划分数据集 + 归一化标签
-│   │   ├── validate_data.py       # 校验图片对和 OBB 标签
-│   │   ├── visualize_labels.py    # 把 OBB 标签画回原图
-│   │   ├── compare_labels.py      # 三合一对比图 (提取vs人工vs原图)
-│   │   ├── rknn/                  # RK3576 板端部署
-│   │   │   ├── infer.py           # 板端推理 (rknn-toolkit-lite2)
-│   │   │   ├── infer_ctypes.py    # 板端推理 (ctypes + librknnrt.so C API)
-│   │   │   ├── infer_min.py       # 最小验证脚本 (ctypes 加载 RKNN)
-│   │   │   ├── server.py          # Web 检测服务 (Flask, RK3576)
-│   │   │   └── templates/
-│   │   │       └── index.html     # Web 前端页面
-│   │   ├── data/                  # OBB 数据
-│   │   │   ├── raw/               # 719 对原图+标注图 (原始数据)
-│   │   │   ├── datasets/
-│   │   │   │   └── blood_label/   # OBB 训练数据集
-│   │   │   │       ├── train/  images/  labels/   (463 张)
-│   │   │   │       ├── val/    images/  labels/   (132 张)
-│   │   │   │       └── test/   images/  labels/   ( 67 张)
-│   │   │   ├── manual_label/      # 57 张丢弃图供人工改
-│   │   │   ├── test_pair/         # 测试图片对
-│   │   │   ├── sample30/          # 30 张样本
-│   │   │   ├── sample30_viz/      # 30 张样本可视化
-│   │   │   ├── sample_check/      # 样本检查
-│   │   │   ├── sample_check_viz/  # 样本检查可视化
-│   │   │   ├── compare/           # 三合一比较图输出
-│   │   │   ├── verify_obb/        # OBB 验证
-│   │   │   └── train_log.txt
-│   │   ├── crops/                 # 标签裁剪
-│   │   │   ├── crop_labels.py     # 裁剪脚本
-│   │   │   ├── test_images/       # 测试输入图片
-│   │   │   └── output/            # 裁剪输出
-│   │
-│   └── blood_classify/            ← 血袋类型分类
-│       ├── train.py               # 分类模型训练
-│       ├── detect.py              # PC 端分类推理
-│       ├── rknn/
-│       │   └── infer.py           # 板端分类推理 (rknn-toolkit-lite2)
-│       └── data/                  # 分类数据集
-│           └── datasets/
-│               └── blood_type/
-│                   ├── train/
-│                   │   ├── red_blood_cell/    ← 红细胞图片
-│                   │   └── plasma/            ← 血浆图片
-│                   ├── val/
-│                   └── test/
-│
-├── configs/                       ← 配置文件 (项目根目录)
-│   ├── blood_label.yaml           # OBB 数据集配置
-│   └── blood_type.yaml            # 分类数据集配置
-│
-├── runs/                          ← 训练/推理输出 (项目根目录)
-│   ├── obb/                       # OBB 训练输出
-│   └── detect/                    # 推理结果图
-│
-├── runtime/                       # RKNN 板端运行时
-│   └── rknn/
-│       ├── best_rk3576.rknn       # OBB RKNN 模型 (13.3MB)
-│       ├── librknnrt.so           # RKNN C 运行时 (符号链接)
-│       ├── librknnrt_v2.2.0.so    # RKNN C 运行时 v2.2.0
-│       ├── rknn_toolkit_lite2-*.whl
-│       └── README.md
-│
-├── docs/                          # 文档
-│   ├── superpowers/plans/         # 计划文档
-│   └── rk3576-rknn-init-7-排查.md # RKNN 排查记录
-│
-├── server_optimized.py            # 优化版 Web 服务脚本
-├── upload.py                      # 上传脚本
-├── best_n2_rk3576.rknn            # RKNN 模型 (n2 变体)
-├── blood_label.conf               # 标签检测配置
-├── check*.onnx                    # ONNX 调试模型
-├── yolo11n-obb.pt                 # YOLO OBB 权重 (nano)
-├── yolo11s-obb.pt                 # YOLO OBB 权重 (small)
-│
-├── templates/
-│   └── index.html                 # Web 前端页面
-│
-├── .venv/                         # Python 虚拟环境
-├── 训练素材/                       # 原始素材
-└── 训练素材2/                      # 原始素材 (第二批)
+│   ├── blood_label/       ← OBB 标签检测 (训练/推理/板端 rknn/)
+│   └── blood_classify/    ← 血袋类型分类
+├── scripts/
+│   ├── rknn/              ← RKOPT ONNX 转换
+│   ├── quant/             ← INT8 量化 (convert_int8/calc_error/sim_test)
+│   └── upload_model.py    # 模型上传板子
+├── configs/               ← 数据集 yaml + supervisor conf
+├── runtime/rknn/          ← 板端运行时 (librknnrt.so, lite2 whl, rknn 模型)
+├── docs/                  ← 文档 (rkopt-int8-guide, deployment, training)
+├── models/                ← 本地模型产物 (gitignore)
+└── assets/                ← 示例图片
 ```
 
 ## 技术栈
